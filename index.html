@@ -44,6 +44,15 @@
     /* Filtres */
     #filters { margin-bottom: 20px; }
     #filters input { padding: 5px; margin-right: 10px; }
+
+    #avgBox {
+      margin-top: 15px;
+      padding: 10px;
+      background: #eef;
+      border-radius: 5px;
+      width: fit-content;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -69,20 +78,16 @@
     </table>
   </div>
 
-  <!-- GRÀFIC + FILTRES -->
+  <!-- GRÀFIC + FILTRE PER DIA -->
   <div id="chartTab" class="tab-content">
     <div id="filters">
-      <label>Dia:</label>
+      <label>Selecciona un dia:</label>
       <input type="date" id="filterDay">
 
-      <label>Hora inicial:</label>
-      <input type="time" id="filterStart">
-
-      <label>Hora final:</label>
-      <input type="time" id="filterEnd">
-
-      <button onclick="applyFilters()">Aplicar filtres</button>
+      <button onclick="applyDayFilter()">Aplicar filtre</button>
     </div>
+
+    <div id="avgBox">Mitjana del dia: -- °C</div>
 
     <canvas id="tempChart"></canvas>
   </div>
@@ -148,27 +153,26 @@
       });
     }
 
-    /* --- FILTRES --- */
-    function applyFilters() {
+    /* --- FILTRE PER DIA + MITJANA --- */
+    function applyDayFilter() {
       const day = document.getElementById("filterDay").value;
-      const start = document.getElementById("filterStart").value;
-      const end = document.getElementById("filterEnd").value;
 
-      let filtered = allData;
-
-      if (day) {
-        filtered = filtered.filter(d => d.timestamp.startsWith(day));
+      if (!day) {
+        alert("Selecciona un dia.");
+        return;
       }
 
-      if (start) {
-        filtered = filtered.filter(d => d.timestamp.slice(11,16) >= start);
-      }
-
-      if (end) {
-        filtered = filtered.filter(d => d.timestamp.slice(11,16) <= end);
-      }
+      const filtered = allData.filter(d => d.timestamp.startsWith(day));
 
       updateChart(filtered);
+
+      if (filtered.length > 0) {
+        const avg = filtered.reduce((sum, d) => sum + d.temperature_c, 0) / filtered.length;
+        document.getElementById("avgBox").innerText =
+          "Mitjana del dia: " + avg.toFixed(2) + " °C";
+      } else {
+        document.getElementById("avgBox").innerText = "Mitjana del dia: -- °C";
+      }
     }
 
     /* --- CARREGAR JSON --- */
