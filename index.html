@@ -4,18 +4,33 @@
   <meta charset="UTF-8">
   <title>Monitor de Temperatura DS18B20</title>
 
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f7f7f7;
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+
+    /* Pestanyes */
+    .tabs { margin-top: 20px; }
+    .tab-btn {
+      padding: 10px 20px;
+      cursor: pointer;
+      background: #ddd;
+      border: none;
+      margin-right: 5px;
+      border-radius: 5px 5px 0 0;
     }
-    h1 {
-      margin-bottom: 10px;
+    .tab-btn.active { background: white; border-bottom: 2px solid white; }
+
+    .tab-content {
+      display: none;
+      background: white;
+      padding: 20px;
+      border-radius: 0 5px 5px 5px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
+    .tab-content.active { display: block; }
+
+    /* Taula */
     table {
       border-collapse: collapse;
       width: 100%;
@@ -23,65 +38,85 @@
       margin-top: 20px;
       background: white;
     }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-    }
-    th {
-      background: #eaeaea;
-    }
-    #chart-container {
-      width: 100%;
-      max-width: 800px;
-      margin-top: 30px;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #eaeaea; }
+
+    /* Filtres */
+    #filters { margin-bottom: 20px; }
+    #filters input { padding: 5px; margin-right: 10px; }
   </style>
 </head>
 <body>
 
   <h1>Monitor de Temperatura DS18B20</h1>
-  <p>Dades actualitzades automàticament cada 30 segons.</p>
 
-  <!-- GRÀFIC -->
-  <div id="chart-container">
-    <canvas id="tempChart"></canvas>
+  <!-- PESTANYES -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="openTab('tableTab')">Taula</button>
+    <button class="tab-btn" onclick="openTab('chartTab')">Gràfic</button>
   </div>
 
   <!-- TAULA -->
-  <table id="temp-table">
-    <thead>
-      <tr>
-        <th>Timestamp (UTC)</th>
-        <th>Temperatura (°C)</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div id="tableTab" class="tab-content active">
+    <table id="temp-table">
+      <thead>
+        <tr>
+          <th>Timestamp (UTC)</th>
+          <th>Temperatura (°C)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- GRÀFIC + FILTRES -->
+  <div id="chartTab" class="tab-content">
+    <div id="filters">
+      <label>Dia:</label>
+      <input type="date" id="filterDay">
+
+      <label>Hora inicial:</label>
+      <input type="time" id="filterStart">
+
+      <label>Hora final:</label>
+      <input type="time" id="filterEnd">
+
+      <button onclick="applyFilters()">Aplicar filtres</button>
+    </div>
+
+    <canvas id="tempChart"></canvas>
+  </div>
 
   <script>
-    const JSON_URL = "data/temperatures.json";
+    const JSON_URL = "https://sergipato5.github.io/sergipato5.github.io/data/temperatures.json";
 
+    let allData = [];
     let chart;
-    let chartData = {
-      labels: [],
-      datasets: [{
-        label: "Temperatura (°C)",
-        data: [],
-        borderColor: "red",
-        backgroundColor: "rgba(255,0,0,0.2)",
-        tension: 0.2
-      }]
-    };
 
+    /* --- PESTANYES --- */
+    function openTab(tabId) {
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
+
+      event.target.classList.add("active");
+      document.getElementById(tabId).classList.add("active");
+    }
+
+    /* --- GRÀFIC --- */
     function createChart() {
       const ctx = document.getElementById("tempChart").getContext("2d");
       chart = new Chart(ctx, {
         type: "line",
-        data: chartData,
+        data: {
+          labels: [],
+          datasets: [{
+            label: "Temperatura (°C)",
+            data: [],
+            borderColor: "red",
+            backgroundColor: "rgba(255,0,0,0.2)",
+            tension: 0.2
+          }]
+        },
         options: {
           responsive: true,
           scales: {
@@ -92,38 +127,68 @@
       });
     }
 
+    function updateChart(data) {
+      chart.data.labels = data.map(d => d.timestamp);
+      chart.data.datasets[0].data = data.map(d => d.temperature_c);
+      chart.update();
+    }
+
+    /* --- TAULA --- */
+    function updateTable(data) {
+      const tbody = document.querySelector("#temp-table tbody");
+      tbody.innerHTML = "";
+
+      data.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.timestamp}</td>
+          <td>${item.temperature_c.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /* --- FILTRES --- */
+    function applyFilters() {
+      const day = document.getElementById("filterDay").value;
+      const start = document.getElementById("filterStart").value;
+      const end = document.getElementById("filterEnd").value;
+
+      let filtered = allData;
+
+      if (day) {
+        filtered = filtered.filter(d => d.timestamp.startsWith(day));
+      }
+
+      if (start) {
+        filtered = filtered.filter(d => d.timestamp.slice(11,16) >= start);
+      }
+
+      if (end) {
+        filtered = filtered.filter(d => d.timestamp.slice(11,16) <= end);
+      }
+
+      updateChart(filtered);
+    }
+
+    /* --- CARREGAR JSON --- */
     async function loadData() {
       try {
         const res = await fetch(JSON_URL + "?t=" + Date.now());
         const data = await res.json();
 
-        // Ordenar per timestamp ascendent
         data.sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1));
 
-        // Actualitzar taula
-        const tbody = document.querySelector("#temp-table tbody");
-        tbody.innerHTML = "";
-        data.forEach(item => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${item.timestamp}</td>
-            <td>${item.temperature_c.toFixed(2)}</td>
-          `;
-          tbody.appendChild(tr);
-        });
+        allData = data;
 
-        // Actualitzar gràfic
-        chartData.labels = data.map(d => d.timestamp);
-        chartData.datasets[0].data = data.map(d => d.temperature_c);
-
-        chart.update();
+        updateTable(data);
+        updateChart(data);
 
       } catch (err) {
         console.error("Error carregant JSON:", err);
       }
     }
 
-    // Inicialitzar
     createChart();
     loadData();
     setInterval(loadData, 30000);
