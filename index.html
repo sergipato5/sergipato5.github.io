@@ -45,13 +45,15 @@
     #filters { margin-bottom: 20px; }
     #filters input { padding: 5px; margin-right: 10px; }
 
-    #avgBox {
+    /* Caixa d'estadístiques */
+    #statsBox {
       margin-top: 15px;
-      padding: 10px;
+      padding: 12px;
       background: #eef;
       border-radius: 5px;
       width: fit-content;
       font-weight: bold;
+      line-height: 1.6;
     }
   </style>
 </head>
@@ -87,13 +89,17 @@
       <button onclick="applyDayFilter()">Aplicar filtre</button>
     </div>
 
-    <div id="avgBox">Mitjana del dia: -- °C</div>
+    <div id="statsBox">
+      Mitjana del dia: -- °C<br>
+      Temperatura mínima: -- °C<br>
+      Temperatura màxima: -- °C
+    </div>
 
     <canvas id="tempChart"></canvas>
   </div>
 
   <script>
-    const JSON_URL = "data/temperatures.json";
+    const JSON_URL = "https://sergipato5.github.io/sergipato5.github.io/data/temperatures.json";
 
     let allData = [];
     let chart;
@@ -153,7 +159,7 @@
       });
     }
 
-    /* --- FILTRE PER DIA + MITJANA --- */
+    /* --- FILTRE PER DIA + ESTADÍSTIQUES --- */
     function applyDayFilter() {
       const day = document.getElementById("filterDay").value;
 
@@ -166,12 +172,24 @@
 
       updateChart(filtered);
 
+      const statsBox = document.getElementById("statsBox");
+
       if (filtered.length > 0) {
-        const avg = filtered.reduce((sum, d) => sum + d.temperature_c, 0) / filtered.length;
-        document.getElementById("avgBox").innerText =
-          "Mitjana del dia: " + avg.toFixed(2) + " °C";
+        const temps = filtered.map(d => d.temperature_c);
+
+        const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
+        const min = Math.min(...temps);
+        const max = Math.max(...temps);
+
+        statsBox.innerHTML =
+          `Mitjana del dia: ${avg.toFixed(2)} °C<br>` +
+          `Temperatura mínima: ${min.toFixed(2)} °C<br>` +
+          `Temperatura màxima: ${max.toFixed(2)} °C`;
       } else {
-        document.getElementById("avgBox").innerText = "Mitjana del dia: -- °C";
+        statsBox.innerHTML =
+          "Mitjana del dia: -- °C<br>" +
+          "Temperatura mínima: -- °C<br>" +
+          "Temperatura màxima: -- °C";
       }
     }
 
