@@ -9,7 +9,6 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
 
-    /* Pestanyes */
     .tabs { margin-top: 20px; }
     .tab-btn {
       padding: 10px 20px;
@@ -30,7 +29,6 @@
     }
     .tab-content.active { display: block; }
 
-    /* Taula */
     table {
       border-collapse: collapse;
       width: 100%;
@@ -41,11 +39,9 @@
     th, td { border: 1px solid #ccc; padding: 8px; }
     th { background: #eaeaea; }
 
-    /* Filtres */
     #filters { margin-bottom: 20px; }
     #filters input { padding: 5px; margin-right: 10px; }
 
-    /* Caixa d'estadístiques */
     #statsBox {
       margin-top: 15px;
       padding: 12px;
@@ -61,13 +57,11 @@
 
   <h1>Monitor de Temperatura DS18B20</h1>
 
-  <!-- PESTANYES -->
   <div class="tabs">
     <button class="tab-btn active" onclick="openTab('tableTab')">Taula</button>
     <button class="tab-btn" onclick="openTab('chartTab')">Gràfic</button>
   </div>
 
-  <!-- TAULA -->
   <div id="tableTab" class="tab-content active">
     <table id="temp-table">
       <thead>
@@ -80,17 +74,22 @@
     </table>
   </div>
 
-  <!-- GRÀFIC + FILTRE PER DIA -->
   <div id="chartTab" class="tab-content">
     <div id="filters">
-      <label>Selecciona un dia:</label>
+      <label>Dia:</label>
       <input type="date" id="filterDay">
 
-      <button onclick="applyDayFilter()">Aplicar filtre</button>
+      <label>Hora inicial:</label>
+      <input type="time" id="filterStart">
+
+      <label>Hora final:</label>
+      <input type="time" id="filterEnd">
+
+      <button onclick="applyFilter()">Aplicar filtre</button>
     </div>
 
     <div id="statsBox">
-      Mitjana del dia: -- °C<br>
+      Mitjana: -- °C<br>
       Temperatura mínima: -- °C<br>
       Temperatura màxima: -- °C
     </div>
@@ -104,7 +103,6 @@
     let allData = [];
     let chart;
 
-    /* --- PESTANYES --- */
     function openTab(tabId) {
       document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
       document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
@@ -113,7 +111,6 @@
       document.getElementById(tabId).classList.add("active");
     }
 
-    /* --- GRÀFIC --- */
     function createChart() {
       const ctx = document.getElementById("tempChart").getContext("2d");
       chart = new Chart(ctx, {
@@ -144,7 +141,6 @@
       chart.update();
     }
 
-    /* --- TAULA --- */
     function updateTable(data) {
       const tbody = document.querySelector("#temp-table tbody");
       tbody.innerHTML = "";
@@ -159,16 +155,24 @@
       });
     }
 
-    /* --- FILTRE PER DIA + ESTADÍSTIQUES --- */
-    function applyDayFilter() {
+    function applyFilter() {
       const day = document.getElementById("filterDay").value;
+      const start = document.getElementById("filterStart").value;
+      const end = document.getElementById("filterEnd").value;
 
       if (!day) {
         alert("Selecciona un dia.");
         return;
       }
 
-      const filtered = allData.filter(d => d.timestamp.startsWith(day));
+      let filtered = allData.filter(d => d.timestamp.startsWith(day));
+
+      if (start) {
+        filtered = filtered.filter(d => d.timestamp.slice(11,16) >= start);
+      }
+      if (end) {
+        filtered = filtered.filter(d => d.timestamp.slice(11,16) <= end);
+      }
 
       updateChart(filtered);
 
@@ -176,24 +180,22 @@
 
       if (filtered.length > 0) {
         const temps = filtered.map(d => d.temperature_c);
-
         const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
         const min = Math.min(...temps);
         const max = Math.max(...temps);
 
         statsBox.innerHTML =
-          `Mitjana del dia: ${avg.toFixed(2)} °C<br>` +
+          `Mitjana: ${avg.toFixed(2)} °C<br>` +
           `Temperatura mínima: ${min.toFixed(2)} °C<br>` +
           `Temperatura màxima: ${max.toFixed(2)} °C`;
       } else {
         statsBox.innerHTML =
-          "Mitjana del dia: -- °C<br>" +
+          "Mitjana: -- °C<br>" +
           "Temperatura mínima: -- °C<br>" +
           "Temperatura màxima: -- °C";
       }
     }
 
-    /* --- CARREGAR JSON --- */
     async function loadData() {
       try {
         const res = await fetch(JSON_URL + "?t=" + Date.now());
