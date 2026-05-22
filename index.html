@@ -62,6 +62,7 @@
     <button class="tab-btn" onclick="openTab('chartTab')">Gràfic</button>
   </div>
 
+  <!-- TAULA -->
   <div id="tableTab" class="tab-content active">
     <table id="temp-table">
       <thead>
@@ -74,6 +75,7 @@
     </table>
   </div>
 
+  <!-- GRÀFIC + FILTRE DIA + HORES -->
   <div id="chartTab" class="tab-content">
     <div id="filters">
       <label>Dia:</label>
@@ -165,11 +167,15 @@
         return;
       }
 
+      // Filtrar por día
       let filtered = allData.filter(d => d.timestamp.startsWith(day));
 
+      // Filtrar por hora inicial
       if (start) {
         filtered = filtered.filter(d => d.timestamp.slice(11,16) >= start);
       }
+
+      // Filtrar por hora final
       if (end) {
         filtered = filtered.filter(d => d.timestamp.slice(11,16) <= end);
       }
